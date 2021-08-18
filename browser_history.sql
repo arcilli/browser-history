@@ -13,3 +13,4 @@ create table if not exists Urls (
 	userId integer,
 	foreign key (userId) references users(id)
 );
+

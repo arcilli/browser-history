@@ -7,7 +7,7 @@ create table if not exists users (
 );
 
 create table if not exists Urls (
-	id integer primary key,
+	id serial primary key,
 	value varchar(70) not null,
 	timestamp timestamp, 
 	userId integer,

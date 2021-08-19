@@ -1,4 +1,4 @@
-import DataBaseConn.{getAll, putUser}
+import DataBaseConn.{getAll, putUser, updateUsername}
 import User.registerAndLoginRoute
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
@@ -15,6 +15,7 @@ import scala.util.{Failure, Success}
   GET /users -> get all the users
   GET /user/{id} -> get a user by id
   GET /login -> OK (Successful), NotFound (Error)
+  PATCH /changeName?name1=?&name2=?
  */
 
 // id is auto incremented
@@ -110,8 +111,23 @@ object User extends UserJsonProtocol with ActorUser {
         }
         else
           complete(StatusCodes.NotFound)
-      }
-
+      }~
+  ///Change a name for a specific username
+        (path( "changeName") & patch) {
+            parameter(Symbol("name1").as[String], Symbol("name2").as[String]) { (name1, name2) =>
+              val maybeId: Option[UserComplete] = getAll.find(i => i.username == name1)
+                maybeId match {
+                  case Some(_) =>
+                    if(getAll.find(i => i.username == name2).isEmpty)
+                    {
+                      updateUsername(name1, name2)
+                    complete(StatusCodes.OK)
+                    }
+                    else complete(StatusCodes.Forbidden)
+                  case None => complete(StatusCodes.NotFound)
+                }
+              }
+            }
 }
 
 object MainUser extends App with ActorUser {

@@ -1,3 +1,5 @@
+import DataBaseConn.{getAll, putUser}
+import User.registerAndLoginRoute
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, StatusCodes}
@@ -15,61 +17,67 @@ import scala.util.{Failure, Success}
   GET /login -> OK (Successful), NotFound (Error)
  */
 
-case class UserInfo(username: String, password: String)
+// id is auto incremented
+case class UserComplete(id: Int, username: String, password: String)
+case class UserPartial(username: String, password: String)
 
-trait UserJsonProtocol extends DefaultJsonProtocol{
-  implicit val userFormat = jsonFormat2(UserInfo)
+trait UserJsonProtocol extends DefaultJsonProtocol {
+  implicit val userPartialFormat = jsonFormat2(UserPartial)
+  implicit val userCompleteFormat = jsonFormat3(UserComplete)
 }
 
-object User extends App with UserJsonProtocol{
+trait ActorUser{
+  implicit val system = ActorSystem("UserActor")
+}
 
-  implicit val system = ActorSystem("User")
+object User extends UserJsonProtocol with ActorUser {
+
   import system.dispatcher
 
-  var users = Map[Int, UserInfo]()
-  var id: Int = 0
-
-  def findUser(username: String, password: String): Boolean = {
-    if(!(users.values.toList.find(i => i.username == username && i.password == registerHashPass(password)).isEmpty)) true
+  def checkLoginUser(username: String, password: String): Boolean = {
+    if(!(getAll.find(i => i.username == username && i.password == password).isEmpty)) true
     else false
   }
 
-  def findUserById(id: Int): Option[UserInfo] ={
-    users.get(id)
+  def findUserById(idUser: Int) = {
+    getAll.find(i => i.id == idUser)
   }
+
   def registerHashPass(password: String): String = password.hashCode.toString
 
-  val registerRoute =
+  val registerAndLoginRoute =
     (path("register") & post & extractRequest & extractLog){ (request, log) =>
+      //TODO: try to use .map/for
       val entity = request.entity
       val strictEntity = entity.toStrict(2 seconds)
-      val userFuture = strictEntity.map(_.data.utf8String.parseJson.convertTo[UserInfo])
+      val userFuture = strictEntity.map(_.data.utf8String.parseJson.convertTo[UserPartial])
 
-      userFuture.onComplete{
-        case Success(value) =>
-          id += 1
-          val user = UserInfo(value.username, registerHashPass(value.password))
-          users = users + (id ->user)
-        case Failure(exception) =>
-          log.warning(s"Warning: $exception")
-      }
-      complete(userFuture
-        .map(_ => StatusCodes.OK)
-        .recover{
-          case _ => StatusCodes.InternalServerError
+      if(getAll.find(i => i.username == userFuture.value.get.get.username).isEmpty) {
+        userFuture.onComplete {
+          case Success(value) =>
+            putUser(value.username, registerHashPass(value.password))
+          case Failure(exception) =>
+            log.error(s"Error: $exception")
         }
-      )
+        complete(userFuture
+          .map(_ => StatusCodes.OK)
+          .recover {
+            case _ => StatusCodes.InternalServerError
+          }
+        )
+      }
+      else complete(StatusCodes.Forbidden)
     }~
       (path("users") & get){
         complete(
           HttpEntity(
             ContentTypes.`application/json`,
-            users.values.toList.toJson.prettyPrint
+            getAll.toJson.prettyPrint
           )
         )
-      } ~
+      }~
       (path("user" / IntNumber ) & get){ userId =>
-        val maybeId: Option[UserInfo] = findUserById(userId)
+        val maybeId: Option[UserComplete] = findUserById(userId)
         maybeId match {
           case Some(item) =>
             complete(
@@ -81,21 +89,21 @@ object User extends App with UserJsonProtocol{
           case None => complete(StatusCodes.NotFound)
         }
       }~
-      (path("login") & get & extractRequest & extractLog){ (request, log) =>
+      (path("login") & get & extractRequest & extractLog) { (request, log) =>
         val entity = request.entity
         val strictEntity = entity.toStrict(2 seconds)
-        val userFuture = strictEntity.map(_.data.utf8String.parseJson.convertTo[UserInfo])
+        val userFuture = strictEntity.map(_.data.utf8String.parseJson.convertTo[UserPartial])
 
-        if(findUser(userFuture.value.get.get.username, userFuture.value.get.get.password)) {
+        if (checkLoginUser(userFuture.value.get.get.username, registerHashPass(userFuture.value.get.get.password))) {
           userFuture.onComplete {
             case Success(value) =>
               log.info(s"Logged in with success: ${value.username}")
             case Failure(exception) =>
-              log.warning(s"Warning: $exception")
+              log.error(s"Error: $exception")
           }
           complete(userFuture
             .map(_ => StatusCodes.OK)
-            .recover{
+            .recover {
               case _ => StatusCodes.InternalServerError
             }
           )
@@ -104,5 +112,9 @@ object User extends App with UserJsonProtocol{
           complete(StatusCodes.NotFound)
       }
 
-  Http().newServerAt("localhost", 8080).bind(registerRoute)
+}
+
+object MainUser extends App with ActorUser {
+
+  Http().newServerAt("localhost", 8080).bind(registerAndLoginRoute)
 }

@@ -14,13 +14,11 @@ object DataBaseConn{
   )
 
   def findUserByName(username: String)  = {
-    val a = sql"select id, username, password from users where username = $username"
+    sql"select id, username, password from users where username = $username"
       .query[UserComplete]
       .option
       .transact(xa)
       .unsafeRunSync()
-    println(a)
-      a
 
   }
 

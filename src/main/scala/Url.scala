@@ -29,7 +29,7 @@ object DatabaseConnection {
   implicit val cs: ContextShift[IO] = IO.contextShift(ExecutionContext.global)
 
   val xa = Transactor.fromDriverManager[IO](
-    "org.postgresql.Driver", "jdbc:postgresql:browser_history", "postgres", "oracle2018"
+    "org.postgresql.Driver", "jdbc:postgresql:browser_history", "postgres", ""
   )
 
   def storeUrl(userId: Int, timestamp: Timestamp, value: String): Int = {

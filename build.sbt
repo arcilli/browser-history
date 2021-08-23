@@ -19,5 +19,5 @@ libraryDependencies ++= Seq(
   "org.tpolecat" %% "doobie-core" % "0.12.1",
   "org.tpolecat" %% "doobie-postgres"  % "0.12.1",
   "com.typesafe.akka" %% "akka-slf4j" % AkkaVersion,
-  "ch.qos.logback"  %  "logback-classic"  % "1.3.0-alpha4"
+  "ch.qos.logback" % "logback-classic" % "1.3.0-alpha4"
 )

@@ -1,4 +1,4 @@
-import DataBaseConn.{findUser, findUserByName, getAll, insertUser, updateUsername}
+import UserDatabaseImplementation._
 import UserRoute.registerAndLoginRoute
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
@@ -66,10 +66,24 @@ object UserRoute extends UserJsonProtocol with ActorUser with SprayJsonSupport {
         }
       }~
       (path("login") & get) {
-        entity(as[User]){ user =>
-          if(!(findUser(user.username, registerHashPass(user.password)).isEmpty))
-            complete(StatusCodes.OK)
-          else complete(StatusCodes.NotFound)
+        entity(as[User]){ user: User =>
+          val userFound = findUser(user.username)
+          if(userFound.isDefined) {
+            if(registerHashPass(user.password).equals(userFound.get.password))
+              complete(StatusCodes.OK)
+            else complete(StatusCodes.NotFound)
+          } else complete(StatusCodes.NotFound)
+        }
+      }~
+      (path( "changeName") & patch) {
+        parameter(Symbol("name1").as[String], Symbol("name2").as[String]) { (name1, name2) =>
+          val maybeId: Option[User] = findUserByName(name1)
+          maybeId match {
+            case Some(_) =>
+              updateUsername(name1, name2)
+              complete(StatusCodes.OK)
+            case None => complete(StatusCodes.NotFound)
+          }
         }
       }
 

@@ -3,10 +3,8 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, StatusCodes}
 import akka.http.scaladsl.server.Directives._
-import akka.util.Timeout
 import cats.effect.{ContextShift, IO}
 
-import scala.concurrent.duration._
 import java.sql.Timestamp
 import scala.language.postfixOps
 import spray.json._
@@ -29,7 +27,7 @@ object DatabaseConnection {
   implicit val cs: ContextShift[IO] = IO.contextShift(ExecutionContext.global)
 
   val xa = Transactor.fromDriverManager[IO](
-    "org.postgresql.Driver", "jdbc:postgresql:browser_history", "postgres", ""
+    "org.postgresql.Driver", "jdbc:postgresql:browser_history", "postgres", "oracle2018"
   )
 
   def storeUrl(userId: Int, timestamp: Timestamp, value: String): Int = {
@@ -88,8 +86,6 @@ object MainUrls extends App with UrlJsonProtocol with SprayJsonSupport {
   implicit val system = ActorSystem("Url")
 
   import DatabaseConnection._
-
-  implicit val timeout = Timeout(2 seconds)
 
   val route =
     pathPrefix("api" / "urls") {

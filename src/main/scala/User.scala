@@ -71,18 +71,6 @@ object UserRoute extends UserJsonProtocol with ActorUser with SprayJsonSupport {
             complete(StatusCodes.OK)
           else complete(StatusCodes.NotFound)
         }
-      }~
-      ///Change a name for a specific username
-      (path( "changeName") & patch) {
-        parameter(Symbol("name1").as[String], Symbol("name2").as[String]) { (name1, name2) =>
-          val maybeId: Option[User] = findUserByName(name1)
-          maybeId match {
-            case Some(_) =>
-              updateUsername(name1, name2)
-              complete(StatusCodes.OK)
-            case None => complete(StatusCodes.NotFound)
-          }
-        }
       }
 
 }

@@ -4,7 +4,7 @@ import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, StatusCodes}
 import akka.http.scaladsl.server.Directives._
 import akka.util.Timeout
-import cats.effect.IO
+import cats.effect.{ContextShift, IO}
 
 import scala.concurrent.duration._
 import java.sql.Timestamp
@@ -14,83 +14,130 @@ import doobie._
 import doobie.implicits._
 import doobie.implicits.javasql._
 
-
 import scala.concurrent.ExecutionContext
-import scala.util.{Failure, Success}
 
-case class UrlIn(userId: Int, value: String, timestamp: String)
-case class UrlOut(userId: Int, value: String, timestamp: Timestamp)
+/*
+    GET api/urls - all the urls from the database
+    GET api/urls/X - the url with the given id
+    GET api/urls?urlid=X
+    POST api/urls - store the url given in the body
+ */
+
+case class Url(userId: Int, value: String, timestamp: Timestamp)
 
 object DatabaseConnection {
-  implicit val cs = IO.contextShift(ExecutionContext.global)
+  implicit val cs: ContextShift[IO] = IO.contextShift(ExecutionContext.global)
 
   val xa = Transactor.fromDriverManager[IO](
     "org.postgresql.Driver", "jdbc:postgresql:browser_history", "postgres", "oracle2018"
   )
 
-  def createUrl(userId: Int, timestamp: String, value: String) = {
-    sql"insert into urls(timestamp, value, userid) values (${Timestamp.valueOf(timestamp)}, $value, $userId)"
+  def storeUrl(userId: Int, timestamp: Timestamp, value: String): Int = {
+    sql"insert into urls(timestamp, value, userid) values ($timestamp, $value, $userId)"
       .update
       .run
       .transact(xa)
       .unsafeRunSync()
   }
 
-  def getAllUrls: List[UrlOut] = {
-    sql"select userid, value, timestamp from urls".query[UrlOut]
+  def getAllUrls: List[Url] = {
+    sql"select userid, value, timestamp from urls".query[Url]
       .to[List]
+      .transact(xa)
+      .unsafeRunSync()
+  }
+
+  def getAllUrlsForUser(userId: Int): List[Url] = {
+    sql"select userid, value, timestamp from urls where userid=$userId".query[Url]
+      .to[List]
+      .transact(xa)
+      .unsafeRunSync()
+  }
+
+  def getUrlById(urlId: Int): Option[Url] = {
+    sql"select userid, value, timestamp from urls where id=$urlId".query[Url]
+      .option
+      .transact(xa)
+      .unsafeRunSync()
+
+  }
+
+  def getUrlByUserIdAndUrlId(urlId: Int): Option[Url] = {
+    sql"select userid, value, timestamp from urls where id=$urlId".query[Url]
+      .option
       .transact(xa)
       .unsafeRunSync()
   }
 }
 
 trait UrlJsonProtocol extends DefaultJsonProtocol {
-  // for json url with timestamp string
-  implicit val urlFormat = jsonFormat3(UrlIn)
-
-  // for url with timestamp Timestamp
   implicit object TimestampFormat extends JsonFormat[Timestamp] {
-    override def write(obj: Timestamp): JsValue =  JsString(obj.toString)
+    override def write(obj: Timestamp): JsValue = JsString(obj.toString)
 
     override def read(json: JsValue): Timestamp =
       json match {
-        case JsString(time) =>  Timestamp.valueOf(time)
-        case _ => throw DeserializationException("Expected Timestamp as JsNumber")
+        case JsString(time) => Timestamp.valueOf(time)
+        case _ => throw DeserializationException("Expected a Date as a String")
       }
   }
-  implicit val urlFormatOut = jsonFormat3(UrlOut)
+
+  implicit val urlFormat = jsonFormat3(Url)
 }
 
 object MainUrls extends App with UrlJsonProtocol with SprayJsonSupport {
   implicit val system = ActorSystem("Url")
-  import system.dispatcher
+
   import DatabaseConnection._
 
   implicit val timeout = Timeout(2 seconds)
 
   val route =
-    path("api" / "urls") {
-      (post & extractRequest) { request =>
-        val entity = request.entity
-        val strictEntityFuture = entity.toStrict(2 seconds)
-        val urlFuture = strictEntityFuture.map (_.data.utf8String.parseJson.convertTo[UrlIn])
-
-        onComplete(urlFuture) {
-          case Success(url) =>
-            createUrl(url.userId,  url.timestamp, url.value)
-            complete(StatusCodes.OK)
-          case Failure(ex) =>
-            failWith(ex)
+    pathPrefix("api" / "urls") {
+      post {
+        entity(as[Url]) { url =>
+          storeUrl(url.userId, url.timestamp, url.value)
+          complete(StatusCodes.OK)
         }
       } ~
         get {
-          pathEndOrSingleSlash {
-            complete(
-              HttpEntity(
-                ContentTypes.`application/json`,
-                getAllUrls.toJson.prettyPrint
-              ))
-          }
+          (path(IntNumber) | parameter(Symbol("urlid").as[Int])) { urlId =>
+            getUrlById(urlId) match {
+              case Some(url) => complete(
+                HttpEntity(
+                  ContentTypes.`application/json`,
+                  url.toJson.prettyPrint
+                )
+              )
+              case None => complete(StatusCodes.NotFound)
+            }
+          } ~
+            parameter(Symbol("userid").as[Int]) { userId =>
+              val urls = getAllUrlsForUser(userId)
+              if (urls.isEmpty)
+                complete(HttpEntity(
+                  ContentTypes.`text/html(UTF-8)`,
+                  """
+                    |<html>
+                    | <body>
+                    |   User with the given ID doesn't have any URLs stored in the browser's history
+                    | </body>
+                    |</html>
+                    |""".stripMargin
+                ))
+              else
+                complete(
+                  HttpEntity(
+                    ContentTypes.`application/json`,
+                    urls.toJson.prettyPrint
+                  ))
+            } ~
+            pathEndOrSingleSlash {
+              complete(
+                HttpEntity(
+                  ContentTypes.`application/json`,
+                  getAllUrls.toJson.prettyPrint
+                ))
+            }
         }
     }
 

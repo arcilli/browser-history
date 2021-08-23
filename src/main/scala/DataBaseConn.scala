@@ -1,20 +1,20 @@
+import DataBaseConn.xa
+import cats.effect.IO
+import doobie._
+import doobie.implicits._
+import scala.concurrent.ExecutionContext
 
-//DataBaseConnection
+trait UserDatabaseFunctions{
+  def findUserByName(username: String): Option[User]
+  def getAll: List[UserRecord]
+  def insertUser(username: String, password: String)
+  def updateUsername(usernameFirst: String, usernameSecond: String)
+  def findUser(username: String): Option[User]
+}
 
-object DataBaseConn{
-  import cats.effect.IO
-  import doobie._
-  import doobie.implicits._
+object UserDatabaseImplementation extends UserDatabaseFunctions {
 
-  import scala.concurrent.ExecutionContext
-
-  implicit val cs = IO.contextShift(ExecutionContext.global)
-
-  val xa = Transactor.fromDriverManager[IO](
-    "org.postgresql.Driver", "jdbc:postgresql:browserhistory", "postgres", "Bambina12"
-  )
-
-  def findUserByName(username: String)  = {
+  override def findUserByName(username: String): Option[User]  = {
     sql"select * from users where username = $username"
       .query[User]
       .option
@@ -22,7 +22,7 @@ object DataBaseConn{
       .unsafeRunSync()
   }
 
-  def getAll: List[UserRecord]  = {
+  override def getAll: List[UserRecord]  = {
     sql"select id, username, password from users"
       .query[UserRecord]
       .to[List]
@@ -30,7 +30,7 @@ object DataBaseConn{
       .unsafeRunSync()
   }
 
-  def insertUser(username: String, password: String) = {
+  override def insertUser(username: String, password: String) = {
     sql"insert into users(username, password) values ($username, $password)"
       .update
       .run
@@ -38,7 +38,7 @@ object DataBaseConn{
       .unsafeRunSync()
   }
 
-  def updateUsername(usernameFirst: String, usernameSecond: String) = {
+  override def updateUsername(usernameFirst: String, usernameSecond: String) = {
     sql"update users set username = $usernameSecond where username=$usernameFirst"
       .update
       .run
@@ -46,12 +46,21 @@ object DataBaseConn{
       .unsafeRunSync()
   }
 
-  def findUser(username: String, password: String) ={
-    sql"select * from users where username = $username and password = $password"
+  override def findUser(username: String): Option[User] = {
+    sql"select username, password from users where username = $username"
       .query[User]
       .option
       .transact(xa)
       .unsafeRunSync()
   }
+
+}
+
+object DataBaseConn{
+  implicit val cs = IO.contextShift(ExecutionContext.global)
+
+  val xa = Transactor.fromDriverManager[IO](
+    "org.postgresql.Driver", "jdbc:postgresql:browserhistory", "postgres", ""
+  )
 
 }

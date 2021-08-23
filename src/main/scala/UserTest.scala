@@ -12,7 +12,7 @@ class UserTest
     with ScalatestRouteTest
     with UserJsonProtocol
     with SprayJsonSupport {
-
+      
     "a user" should{
       "Register: insert a new user - username unique" in{
         val newUser = User("jinx", "jinx01")

@@ -17,6 +17,8 @@ libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "3.2.9",
   "org.tpolecat" %% "doobie-core"      % "0.12.1",
   "org.tpolecat" %% "doobie-postgres"  % "0.12.1",          
-  "org.tpolecat" %% "doobie-scalatest" % "0.12.1" % "test"
+  "org.tpolecat" %% "doobie-scalatest" % "0.12.1" % "test",
+  "com.typesafe.akka" %% "akka-testkit" % AkkaVersion,
+  "org.tpolecat" %% "doobie-hikari"    % "0.12.1"         // HikariCP transactor.
 
 )

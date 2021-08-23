@@ -11,7 +11,7 @@ object DataBaseConn{
   implicit val cs = IO.contextShift(ExecutionContext.global)
 
   val xa = Transactor.fromDriverManager[IO](
-    "org.postgresql.Driver", "jdbc:postgresql:browserhistory", "postgres", "Bambina12"
+    "org.postgresql.Driver", "jdbc:postgresql:browserhistory", "postgres", ""
   )
 
   def findUserByName(username: String)  = {

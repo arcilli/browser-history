@@ -70,7 +70,7 @@ object UserRoute extends UserJsonProtocol with ActorUser with SprayJsonSupport {
           val userFound = findUser(user.username)
           if(userFound.isDefined) {
             if(registerHashPass(user.password).equals(userFound.get.password))
-            complete(StatusCodes.OK)
+              complete(StatusCodes.OK)
             else complete(StatusCodes.NotFound)
           } else complete(StatusCodes.NotFound)
         }

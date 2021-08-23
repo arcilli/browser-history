@@ -1,3 +1,4 @@
+
 //DataBaseConnection
 
 object DataBaseConn{
@@ -10,32 +11,26 @@ object DataBaseConn{
   implicit val cs = IO.contextShift(ExecutionContext.global)
 
   val xa = Transactor.fromDriverManager[IO](
-    "org.postgresql.Driver", "jdbc:postgresql:browserhistory", "postgres", ""
+    "org.postgresql.Driver", "jdbc:postgresql:browserhistory", "postgres", "Bambina12"
   )
 
   def findUserByName(username: String)  = {
-    val a = sql"select id, username, password from users where username = $username"
-      .query[UserComplete]
+    sql"select * from users where username = $username"
+      .query[User]
       .option
       .transact(xa)
       .unsafeRunSync()
-    println(a)
-      a
-
   }
 
-
-  def getAll: List[UserComplete]  = {
-    val users = sql"select id, username, password from users"
-      .query[UserComplete]
+  def getAll: List[UserRecord]  = {
+    sql"select id, username, password from users"
+      .query[UserRecord]
       .to[List]
       .transact(xa)
       .unsafeRunSync()
-    //println(users)
-    users
   }
 
-  def putUser(username: String, password: String) = {
+  def insertUser(username: String, password: String) = {
     sql"insert into users(username, password) values ($username, $password)"
       .update
       .run
@@ -47,6 +42,14 @@ object DataBaseConn{
     sql"update users set username = $usernameSecond where username=$usernameFirst"
       .update
       .run
+      .transact(xa)
+      .unsafeRunSync()
+  }
+
+  def findUser(username: String, password: String) ={
+    sql"select * from users where username = $username and password = $password"
+      .query[User]
+      .option
       .transact(xa)
       .unsafeRunSync()
   }

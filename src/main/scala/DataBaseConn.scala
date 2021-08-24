@@ -1,6 +1,8 @@
 import DataBaseConn.xa
-import cats.effect.IO
+import cats.effect.{Blocker, IO}
+import com.zaxxer.hikari.HikariDataSource
 import doobie._
+import doobie.hikari.HikariTransactor
 import doobie.implicits._
 import doobie.implicits.javasql._
 
@@ -106,11 +108,26 @@ object UserDatabaseImplementation extends UserDatabaseFunctions {
   }
 }
 
-object DataBaseConn{
+object DataBaseConn {
   implicit val cs = IO.contextShift(ExecutionContext.global)
 
-  val xa = Transactor.fromDriverManager[IO](
-    "org.postgresql.Driver", "jdbc:postgresql:browser_history", "postgres", "oracle2018"
+//  val xa = Transactor.fromDriverManager[IO](
+//    "org.postgresql.Driver", "jdbc:postgresql:browser_history", "postgres", ""
+//  )
+
+  private val dataSource: HikariDataSource = {
+    val ds = new HikariDataSource
+    ds.setDriverClassName("org.postgresql.Driver")
+    ds.setJdbcUrl("jdbc:postgresql:browser_history")
+    ds.setUsername("postgres")
+    ds.setPassword("")
+    ds
+  }
+
+  val xa: Transactor[IO] = HikariTransactor[IO](
+    dataSource,
+    connectEC = ExecutionContexts.synchronous,
+    blocker = Blocker.liftExecutionContext(ExecutionContexts.synchronous)
   )
 
 }

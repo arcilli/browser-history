@@ -13,18 +13,18 @@ class UrlTest extends AnyWordSpec
   with Matchers
   with ScalatestRouteTest
   with UserJsonProtocol
-  with SprayJsonSupport{
+  with SprayJsonSupport {
 
   "A url" should {
-    "Get all URLs from DB"in {
+    "Get all URLs from DB" in {
       Get("/urls") ~> urlRoute ~> check {
         status shouldBe StatusCodes.OK
         entityAs[List[Url]] shouldBe getAllUrls
       }
     }
     "Store an url visited by a user" in {
-      val newUrl = Url(1,"facebook.com",new Timestamp(17842L))
-      Post("/urls",newUrl) ~> urlRoute ~> check {
+      val newUrl = Url(1, "facebook.com", new Timestamp(17842L))
+      Post("/urls", newUrl) ~> urlRoute ~> check {
         status shouldBe StatusCodes.OK
       }
     }
@@ -39,7 +39,17 @@ class UrlTest extends AnyWordSpec
     "Get url with ID" in {
       Get("/urls?urlid=6") ~> urlRoute ~> check {
         status shouldBe StatusCodes.OK
-        entityAs[Option[Url]] shouldBe Some (Url(2, "levi9.com", new Timestamp(1577865600000L)))
+        entityAs[Option[Url]] shouldBe Some(Url(2, "levi9.com", new Timestamp(1577865600000L)))
+      }
+    }
+    "Get URL with non-existent ID" in {
+      Get("/urls?urlid=1000") ~> urlRoute ~> check {
+        status shouldBe StatusCodes.NotFound
+      }
+    }
+    "Get all URLs for user with non-existent ID" in {
+      Get("/urls?userid=1000") ~> urlRoute ~> check {
+        status shouldBe StatusCodes.NotFound
       }
     }
   }

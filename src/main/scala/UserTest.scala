@@ -23,7 +23,7 @@ class UserTest
       "Register: insert a new user - username not unique" in{
         val newUser = User("Bing", "jinx01")
         Post("/register", newUser) ~> registerAndLoginRoute ~> check{
-          status shouldBe StatusCodes.Forbidden
+          status shouldBe StatusCodes.InternalServerError
         }
       }
       "Get all users" in{

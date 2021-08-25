@@ -60,8 +60,8 @@ object UrlDatabaseImplementation extends UrlDatabaseFunctions {
 trait UserDatabaseFunctions{
   def findUserByName(username: String): Option[User]
   def getAll: List[UserRecord]
-  def insertUser(username: String, password: String)
-  def updateUsername(usernameFirst: String, usernameSecond: String)
+  def insertUser(username: String, password: String): Int
+  def updateUsername(usernameFirst: String, usernameSecond: String): Int
   def findUser(username: String): Option[User]
 }
 
@@ -83,7 +83,7 @@ object UserDatabaseImplementation extends UserDatabaseFunctions {
       .unsafeRunSync()
   }
 
-  override def insertUser(username: String, password: String) = {
+  override def insertUser(username: String, password: String): Int = {
     sql"insert into users(username, password) values ($username, $password)"
       .update
       .run
@@ -91,7 +91,7 @@ object UserDatabaseImplementation extends UserDatabaseFunctions {
       .unsafeRunSync()
   }
 
-  override def updateUsername(usernameFirst: String, usernameSecond: String) = {
+  override def updateUsername(usernameFirst: String, usernameSecond: String): Int = {
     sql"update users set username = $usernameSecond where username=$usernameFirst"
       .update
       .run
@@ -110,10 +110,6 @@ object UserDatabaseImplementation extends UserDatabaseFunctions {
 
 object DataBaseConn {
   implicit val cs = IO.contextShift(ExecutionContext.global)
-
-//  val xa = Transactor.fromDriverManager[IO](
-//    "org.postgresql.Driver", "jdbc:postgresql:browser_history", "postgres", ""
-//  )
 
   private val dataSource: HikariDataSource = {
     val ds = new HikariDataSource

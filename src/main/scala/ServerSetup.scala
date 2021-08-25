@@ -19,35 +19,29 @@ object ServerSetup extends UrlJsonProtocol with SprayJsonSupport {
     path("urls") {
       post {
         entity(as[Url]) { url =>
-          storeUrl(url.userId, url.timestamp, url.value)
-          complete(StatusCodes.OK)
+          if (storeUrl(url.userId, url.timestamp, url.value).equals(1))
+            complete(StatusCodes.OK)
+          else
+            complete(StatusCodes.InternalServerError)
         }
       } ~
         get {
-          (path(IntNumber) | parameter(Symbol("urlid").as[Int])) { urlId =>
+          parameter(Symbol("urlid").as[Int]) { urlId =>
             getUrlById(urlId) match {
-              case Some(url) => complete(
-                HttpEntity(
-                  ContentTypes.`application/json`,
-                  url.toJson.prettyPrint
+              case Some(url) =>
+                complete(
+                  HttpEntity(
+                    ContentTypes.`application/json`,
+                    url.toJson.prettyPrint
+                  )
                 )
-              )
               case None => complete(StatusCodes.NotFound)
             }
           } ~
             parameter(Symbol("userid").as[Int]) { userId =>
               val urls = getAllUrlsForUser(userId)
               if (urls.isEmpty)
-                complete(HttpEntity(
-                  ContentTypes.`text/html(UTF-8)`,
-                  """
-                    |<html>
-                    | <body>
-                    |   User with the given ID doesn't have any URLs stored in the browser's history
-                    | </body>
-                    |</html>
-                    |""".stripMargin
-                ))
+                complete(StatusCodes.NotFound)
               else
                 complete(
                   HttpEntity(
@@ -66,54 +60,57 @@ object ServerSetup extends UrlJsonProtocol with SprayJsonSupport {
     }
 
   val registerAndLoginRoute = {
-      (path("register") & post) {
-        entity(as[User]) { user =>
-          insertUser(user.username, registerHashPass(user.password))
+    (path("register") & post) {
+      entity(as[User]) { user =>
+        if (insertUser(user.username, registerHashPass(user.password)).equals(1))
           complete(StatusCodes.OK)
+        else
+          complete(StatusCodes.InternalServerError)
+      }
+    } ~
+      (path("users") & get) {
+        complete(
+          HttpEntity(
+            ContentTypes.`application/json`,
+            getAll.toJson.prettyPrint
+          )
+        )
+      } ~
+      (path("user" / IntNumber) & get) { userId =>
+        findUserById(userId) match {
+          case Some(item) =>
+            complete(
+              HttpEntity(
+                ContentTypes.`application/json`,
+                item.toJson.prettyPrint
+              )
+            )
+          case None => complete(StatusCodes.NotFound)
         }
       } ~
-        (path("users") & get) {
-          complete(
-            HttpEntity(
-              ContentTypes.`application/json`,
-              getAll.toJson.prettyPrint
-            )
-          )
-        } ~
-        (path("user" / IntNumber) & get) { userId =>
-          val maybeId: Option[UserRecord] = findUserById(userId)
-          maybeId match {
-            case Some(item) =>
-              complete(
-                HttpEntity(
-                  ContentTypes.`application/json`,
-                  item.toJson.prettyPrint
-                )
-              )
-            case None => complete(StatusCodes.NotFound)
-          }
-        } ~
-        (path("login") & get) {
-          entity(as[User]) { user: User =>
-            val userFound = findUser(user.username)
-            if (userFound.isDefined) {
-              if (registerHashPass(user.password).equals(userFound.get.password))
+      (path("login") & get) {
+        entity(as[User]) { user: User =>
+          findUser(user.username) match {
+            case Some(userFound) =>
+              if (registerHashPass(user.password).equals(userFound.password))
                 complete(StatusCodes.OK)
               else complete(StatusCodes.NotFound)
-            } else complete(StatusCodes.NotFound)
-          }
-        } ~
-        (path("changeName") & patch) {
-          parameter(Symbol("name1").as[String], Symbol("name2").as[String]) { (name1, name2) =>
-            val maybeId: Option[User] = findUserByName(name1)
-            maybeId match {
-              case Some(_) =>
-                updateUsername(name1, name2)
-                complete(StatusCodes.OK)
-              case None => complete(StatusCodes.NotFound)
-            }
+            case None => complete(StatusCodes.NotFound)
           }
         }
+      } ~
+      (path("changeName") & patch) {
+        parameter(Symbol("name1").as[String], Symbol("name2").as[String]) { (name1, name2) =>
+          findUserByName(name1) match {
+            case Some(_) =>
+              if (updateUsername(name1, name2).equals(1))
+                complete(StatusCodes.OK)
+              else complete(StatusCodes.InternalServerError)
+
+            case None => complete(StatusCodes.NotFound)
+          }
+        }
+      }
   }
 
   val route =
@@ -124,7 +121,7 @@ object ServerSetup extends UrlJsonProtocol with SprayJsonSupport {
 
 }
 
-object MainUser extends App with SetupActor {
+object Main extends App with SetupActor {
 
   Http().newServerAt("localhost", 8080).bind(route)
 }

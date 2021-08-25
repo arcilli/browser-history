@@ -21,7 +21,7 @@ trait UserJsonProtocol extends DefaultJsonProtocol {
 
 object UserRoute extends UserJsonProtocol {
 
-  def findUserById(idUser: Int) = {
+  def findUserById(idUser: Int): Option[UserRecord] = {
     getAll.find(i => i.id == idUser)
   }
 

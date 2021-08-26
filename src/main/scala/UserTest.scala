@@ -1,5 +1,5 @@
-import UserDatabaseImplementation.getAll
-import UserRoute.registerAndLoginRoute
+import ServerSetup.registerAndLoginRoute
+import UserRepositoryImplementation.getAll
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.testkit.ScalatestRouteTest
@@ -23,7 +23,7 @@ class UserTest
       "Register: insert a new user - username not unique" in{
         val newUser = User("Bing", "jinx01")
         Post("/register", newUser) ~> registerAndLoginRoute ~> check{
-          status shouldBe StatusCodes.Forbidden
+          status shouldBe StatusCodes.InternalServerError
         }
       }
       "Get all users" in{

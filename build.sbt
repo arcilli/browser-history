@@ -14,11 +14,13 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-http" % AkkaHttpVersion,
   "com.typesafe.akka" %% "akka-http-spray-json" % AkkaHttpVersion,
   "com.typesafe.akka" %% "akka-http-testkit" % AkkaHttpVersion,
-  "org.scalatest" %% "scalatest" % "3.2.9",
-  "org.tpolecat" %% "doobie-core"      % "0.12.1",
-  "org.tpolecat" %% "doobie-postgres"  % "0.12.1",          
-  "org.tpolecat" %% "doobie-scalatest" % "0.12.1" % "test",
-  "com.typesafe.akka" %% "akka-testkit" % AkkaVersion,
-  "org.tpolecat" %% "doobie-hikari"    % "0.12.1"         // HikariCP transactor.
 
+  "com.typesafe.akka" %% "akka-testkit" % AkkaVersion,
+  "org.scalatest" %% "scalatest" % "3.2.9",
+  "org.tpolecat" %% "doobie-core" % "0.12.1",
+  "org.tpolecat" %% "doobie-postgres"  % "0.12.1",
+  "org.tpolecat" %% "doobie-scalatest" % "0.12.1" % "test",
+  "org.tpolecat" %% "doobie-hikari"    % "0.12.1",        // HikariCP transactor.
+  "com.typesafe.akka" %% "akka-slf4j" % AkkaVersion,
+  "ch.qos.logback" % "logback-classic" % "1.3.0-alpha4"
 )

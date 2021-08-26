@@ -1,4 +1,4 @@
-import UserDatabaseImplementation._
+import UserRepositoryImplementation._
 import spray.json._
 
 import scala.language.postfixOps

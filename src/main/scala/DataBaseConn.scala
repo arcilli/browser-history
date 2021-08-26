@@ -9,7 +9,7 @@ import doobie.implicits.javasql._
 import java.sql.Timestamp
 import scala.concurrent.ExecutionContext
 
-trait UrlDatabaseFunctions {
+trait UrlRepository {
   def storeUrl(userId: Int, timestamp: Timestamp, value: String): Int
   def getAllUrls: List[Url]
   def getAllUrlsForUser(userId: Int): List[Url]
@@ -17,7 +17,7 @@ trait UrlDatabaseFunctions {
   def getUrlByUserIdAndUrlId(urlId: Int): Option[Url]
 }
 
-object UrlDatabaseImplementation extends UrlDatabaseFunctions {
+object UrlRepositoryImplementation extends UrlRepository {
 
   def storeUrl(userId: Int, timestamp: Timestamp, value: String): Int = {
     sql"insert into urls(timestamp, value, userid) values ($timestamp, $value, $userId)"
@@ -35,14 +35,14 @@ object UrlDatabaseImplementation extends UrlDatabaseFunctions {
   }
 
   def getAllUrlsForUser(userId: Int): List[Url] = {
-    sql"select userid, value, timestamp from urls where userid=$userId".query[Url]
+    sql"select userid, value, timestamp from urls where userid = $userId".query[Url]
       .to[List]
       .transact(xa)
       .unsafeRunSync()
   }
 
   def getUrlById(urlId: Int): Option[Url] = {
-    sql"select userid, value, timestamp from urls where id=$urlId".query[Url]
+    sql"select userid, value, timestamp from urls where id = $urlId".query[Url]
       .option
       .transact(xa)
       .unsafeRunSync()
@@ -50,14 +50,14 @@ object UrlDatabaseImplementation extends UrlDatabaseFunctions {
   }
 
   def getUrlByUserIdAndUrlId(urlId: Int): Option[Url] = {
-    sql"select userid, value, timestamp from urls where id=$urlId".query[Url]
+    sql"select userid, value, timestamp from urls where id = $urlId".query[Url]
       .option
       .transact(xa)
       .unsafeRunSync()
   }
 }
 
-trait UserDatabaseFunctions{
+trait UserRepository {
   def findUserByName(username: String): Option[User]
   def getAll: List[UserRecord]
   def insertUser(username: String, password: String): Int
@@ -65,9 +65,9 @@ trait UserDatabaseFunctions{
   def findUser(username: String): Option[User]
 }
 
-object UserDatabaseImplementation extends UserDatabaseFunctions {
+object UserRepositoryImplementation extends UserRepository {
 
-  override def findUserByName(username: String): Option[User]  = {
+  override def findUserByName(username: String): Option[User] = {
     sql"select * from users where username = $username"
       .query[User]
       .option
@@ -75,7 +75,7 @@ object UserDatabaseImplementation extends UserDatabaseFunctions {
       .unsafeRunSync()
   }
 
-  override def getAll: List[UserRecord]  = {
+  override def getAll: List[UserRecord] = {
     sql"select id, username, password from users"
       .query[UserRecord]
       .to[List]
@@ -92,7 +92,7 @@ object UserDatabaseImplementation extends UserDatabaseFunctions {
   }
 
   override def updateUsername(usernameFirst: String, usernameSecond: String): Int = {
-    sql"update users set username = $usernameSecond where username=$usernameFirst"
+    sql"update users set username = $usernameSecond where username = $usernameFirst"
       .update
       .run
       .transact(xa)

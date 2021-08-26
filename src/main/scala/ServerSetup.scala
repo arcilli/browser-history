@@ -1,6 +1,6 @@
 import ServerSetup.route
-import UrlDatabaseImplementation._
-import UserDatabaseImplementation._
+import UrlRepositoryImplementation._
+import UserRepositoryImplementation._
 import UserRoute._
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http

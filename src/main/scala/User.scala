@@ -1,4 +1,3 @@
-import UserRepositoryImplementation._
 import spray.json._
 
 import scala.language.postfixOps
@@ -20,10 +19,6 @@ trait UserJsonProtocol extends DefaultJsonProtocol {
 }
 
 object UserRoute extends UserJsonProtocol {
-
-  def findUserById(idUser: Int): Option[UserRecord] = {
-    getAll.find(i => i.id == idUser)
-  }
 
   def registerHashPass(password: String): String = password.hashCode.toString
 

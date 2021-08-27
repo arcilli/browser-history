@@ -62,13 +62,14 @@ trait UserRepository {
   def getAll: List[UserRecord]
   def insertUser(username: String, password: String): Int
   def updateUsername(usernameFirst: String, usernameSecond: String): Int
-  def findUser(username: String): Option[User]
+  def findUserById(idUser: Int): Option[UserRecord]
+
 }
 
 object UserRepositoryImplementation extends UserRepository {
 
   override def findUserByName(username: String): Option[User] = {
-    sql"select * from users where username = $username"
+    sql"select username, password from users where username = $username"
       .query[User]
       .option
       .transact(xa)
@@ -99,9 +100,9 @@ object UserRepositoryImplementation extends UserRepository {
       .unsafeRunSync()
   }
 
-  override def findUser(username: String): Option[User] = {
-    sql"select username, password from users where username = $username"
-      .query[User]
+  override def findUserById(idUser: Int): Option[UserRecord] = {
+    sql"select id, username, password from users where id = $idUser"
+      .query[UserRecord]
       .option
       .transact(xa)
       .unsafeRunSync()
@@ -116,7 +117,7 @@ object DataBaseConn {
     ds.setDriverClassName("org.postgresql.Driver")
     ds.setJdbcUrl("jdbc:postgresql:browser_history")
     ds.setUsername("postgres")
-    ds.setPassword("")
+    ds.setPassword("oracle2018")
     ds
   }
 

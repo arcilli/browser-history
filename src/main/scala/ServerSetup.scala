@@ -90,11 +90,11 @@ object ServerSetup extends UrlJsonProtocol with SprayJsonSupport {
       } ~
       (path("login") & get) {
         entity(as[User]) { user: User =>
-          findUser(user.username) match {
+          findUserByName(user.username) match {
             case Some(userFound) =>
               if (registerHashPass(user.password).equals(userFound.password))
                 complete(StatusCodes.OK)
-              else complete(StatusCodes.NotFound)
+              else complete(StatusCodes.Forbidden)
             case None => complete(StatusCodes.NotFound)
           }
         }

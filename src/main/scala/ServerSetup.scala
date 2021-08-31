@@ -1,3 +1,4 @@
+import JwtAuthorization.{createToken, isTokenExpired, isTokenValid, tokensMap}
 import ServerSetup.route
 import UrlRepositoryImplementation._
 import UserRepositoryImplementation._
@@ -5,24 +6,43 @@ import UserRoute._
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
-import akka.http.scaladsl.model.{ContentTypes, HttpEntity, StatusCodes}
+import akka.http.scaladsl.model.headers.{Location, RawHeader}
+import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpResponse, StatusCodes}
 import akka.http.scaladsl.server.Directives._
+import akka.http.scaladsl.server.Route
 import spray.json._
 
 trait SetupActor {
-  implicit val system = ActorSystem("SetupActor")
+  implicit val system: ActorSystem = ActorSystem("SetupActor")
 }
 
 object ServerSetup extends UrlJsonProtocol with SprayJsonSupport {
 
-  val urlRoute =
+  val urlRoute: Route =
     path("urls") {
       post {
-        entity(as[Url]) { url =>
-          if (storeUrl(url.userId, url.timestamp, url.value).equals(1))
-            complete(StatusCodes.OK)
-          else
-            complete(StatusCodes.InternalServerError)
+        optionalHeaderValueByName("Authorization") {
+          case Some(token) =>
+            if (isTokenValid(token)) {
+              entity(as[Url]) { url =>
+                if (storeUrl(url.userId, url.timestamp, url.value).equals(1))
+                  complete(StatusCodes.OK)
+                else
+                  complete(StatusCodes.InternalServerError)
+              }
+            }
+            else {
+              tokensMap.foreach {
+                k =>
+                  if (k._2 == token) {
+                    tokensMap.remove(k._1)
+                  }
+              }
+//              complete(StatusCodes.Found, Seq(Location("/api/login")),"")
+              redirect("/api/login", StatusCodes.SeeOther)
+              //              complete(HttpResponse(status = StatusCodes.Unauthorized, entity = "Token is invalid, or has been tampered with."))
+            }
+          case _ => complete(HttpResponse(status = StatusCodes.Unauthorized, entity = "No token provided! Please LOGIN"))
         }
       } ~
         get {
@@ -59,7 +79,7 @@ object ServerSetup extends UrlJsonProtocol with SprayJsonSupport {
         }
     }
 
-  val registerAndLoginRoute = {
+  val registerAndLoginRoute: Route = {
     (path("register") & post) {
       entity(as[User]) { user =>
         if (insertUser(user.username, registerHashPass(user.password)).equals(1))
@@ -92,8 +112,12 @@ object ServerSetup extends UrlJsonProtocol with SprayJsonSupport {
         entity(as[User]) { user: User =>
           findUserByName(user.username) match {
             case Some(userFound) =>
-              if (registerHashPass(user.password).equals(userFound.password))
-                complete(StatusCodes.OK)
+              if (registerHashPass(user.password).equals(userFound.password)) {
+                val token = createToken(userFound.username, 1)
+                respondWithHeader(RawHeader("Access-Token", token)) {
+                  complete(StatusCodes.OK)
+                }
+              }
               else complete(StatusCodes.Forbidden)
             case None => complete(StatusCodes.NotFound)
           }
@@ -113,7 +137,7 @@ object ServerSetup extends UrlJsonProtocol with SprayJsonSupport {
       }
   }
 
-  val route =
+  val route: Route =
     pathPrefix("api") {
       urlRoute ~
         registerAndLoginRoute

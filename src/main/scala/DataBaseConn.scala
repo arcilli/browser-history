@@ -64,6 +64,7 @@ trait UserRepository {
   def updateUsername(usernameFirst: String, usernameSecond: String): Int
   def findUserById(idUser: Int): Option[UserRecord]
 
+
 }
 
 object UserRepositoryImplementation extends UserRepository {
@@ -107,6 +108,8 @@ object UserRepositoryImplementation extends UserRepository {
       .transact(xa)
       .unsafeRunSync()
   }
+
+
 }
 
 object DataBaseConn {
@@ -117,7 +120,7 @@ object DataBaseConn {
     ds.setDriverClassName("org.postgresql.Driver")
     ds.setJdbcUrl("jdbc:postgresql:browser_history")
     ds.setUsername("postgres")
-    ds.setPassword("oracle2018")
+    ds.setPassword("levi9")
     ds
   }
 

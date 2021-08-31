@@ -4,7 +4,7 @@ version := "0.1"
 
 scalaVersion := "2.13.6"
 
-val AkkaVersion = "2.6.15"
+val AkkaVersion = "2.6.16"
 val AkkaHttpVersion = "10.2.6"
 val scalaTestVersion = "3.2.9"
 
@@ -23,5 +23,8 @@ libraryDependencies ++= Seq(
   "org.tpolecat" %% "doobie-hikari" % "0.12.1",        // HikariCP transactor.
   "com.typesafe.akka" %% "akka-slf4j" % AkkaVersion,
   "ch.qos.logback" % "logback-classic" % "1.3.0-alpha4",
-  "org.mockito" %% "mockito-scala-scalatest" % "1.16.37"
+  "org.mockito" %% "mockito-scala-scalatest" % "1.16.37",
+
+  // JWT
+  "com.pauldijou" %% "jwt-spray-json" % "5.0.0"
 )

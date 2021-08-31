@@ -13,13 +13,13 @@ import scala.language.postfixOps
 case class User(username: String, password: String)
 case class UserRecord(id: Int, username: String, password: String)
 
+
 trait UserJsonProtocol extends DefaultJsonProtocol {
   implicit val userPartialFormat = jsonFormat2(User)
   implicit val userCompleteFormat = jsonFormat3(UserRecord)
 }
 
 object UserRoute extends UserJsonProtocol {
-
   def registerHashPass(password: String): String = password.hashCode.toString
 
 }

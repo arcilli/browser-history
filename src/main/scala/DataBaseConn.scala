@@ -8,51 +8,54 @@ import doobie.implicits.javasql._
 import java.sql.Timestamp
 import scala.concurrent.ExecutionContext
 
-trait UrlRepository {
-  def storeUrl(userId: Int, timestamp: Timestamp, value: String): Int
-  def getAllUrls: List[Url]
-  def getAllUrlsForUser(userId: Int): List[Url]
-  def getUrlById(urlId: Int): Option[Url]
-  def getUrlByUserIdAndUrlId(urlId: Int): Option[Url]
-}
+trait UrlRepositoryComponent {
+  val urlRepository: UrlRepositoryImplementation
 
-class UrlRepositoryImplementation(database: DataBaseConn) extends UrlRepository {
-
-  def storeUrl(userId: Int, timestamp: Timestamp, value: String): Int = {
-    sql"insert into urls(timestamp, value, userid) values ($timestamp, $value, $userId)"
-      .update
-      .run
-      .transact(database.xa)
-      .unsafeRunSync()
+  trait UrlRepository {
+    def storeUrl(userId: Int, timestamp: Timestamp, value: String): Int
+    def getAllUrls: List[Url]
+    def getAllUrlsForUser(userId: Int): List[Url]
+    def getUrlById(urlId: Int): Option[Url]
+    def getUrlByUserIdAndUrlId(urlId: Int): Option[Url]
   }
 
-  def getAllUrls: List[Url] = {
-    sql"select userid, value, timestamp from urls".query[Url]
-      .to[List]
-      .transact(database.xa)
-      .unsafeRunSync()
-  }
+  class UrlRepositoryImplementation(database: DataBaseConn) extends UrlRepository {
+    def storeUrl(userId: Int, timestamp: Timestamp, value: String): Int = {
+      sql"insert into urls(timestamp, value, userid) values ($timestamp, $value, $userId)"
+        .update
+        .run
+        .transact(database.xa)
+        .unsafeRunSync()
+    }
 
-  def getAllUrlsForUser(userId: Int): List[Url] = {
-    sql"select userid, value, timestamp from urls where userid = $userId".query[Url]
-      .to[List]
-      .transact(database.xa)
-      .unsafeRunSync()
-  }
+    def getAllUrls: List[Url] = {
+      sql"select userid, value, timestamp from urls".query[Url]
+        .to[List]
+        .transact(database.xa)
+        .unsafeRunSync()
+    }
 
-  def getUrlById(urlId: Int): Option[Url] = {
-    sql"select userid, value, timestamp from urls where id = $urlId".query[Url]
-      .option
-      .transact(database.xa)
-      .unsafeRunSync()
+    def getAllUrlsForUser(userId: Int): List[Url] = {
+      sql"select userid, value, timestamp from urls where userid = $userId".query[Url]
+        .to[List]
+        .transact(database.xa)
+        .unsafeRunSync()
+    }
 
-  }
+    def getUrlById(urlId: Int): Option[Url] = {
+      sql"select userid, value, timestamp from urls where id = $urlId".query[Url]
+        .option
+        .transact(database.xa)
+        .unsafeRunSync()
 
-  def getUrlByUserIdAndUrlId(urlId: Int): Option[Url] = {
-    sql"select userid, value, timestamp from urls where id = $urlId".query[Url]
-      .option
-      .transact(database.xa)
-      .unsafeRunSync()
+    }
+
+    def getUrlByUserIdAndUrlId(urlId: Int): Option[Url] = {
+      sql"select userid, value, timestamp from urls where id = $urlId".query[Url]
+        .option
+        .transact(database.xa)
+        .unsafeRunSync()
+    }
   }
 }
 

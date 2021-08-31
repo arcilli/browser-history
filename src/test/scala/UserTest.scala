@@ -12,9 +12,9 @@ class UserTest extends AnyWordSpec
   with MockitoSugar
   with UserJsonProtocol
   with SprayJsonSupport
-  with ServerSetup {
+  with UserServiceComponent
+  with UserRepositoryComponent {
 
-  override val database = mock[DataBaseConn]
   override val userService = new UserService
   override val userRepository = mock[UserRepositoryImplementation]
 
